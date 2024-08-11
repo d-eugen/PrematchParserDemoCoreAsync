@@ -53,7 +53,6 @@ public class DemoApplication {
                         ReportPrintService printService = new ReportPrintService(reportResult);
                         printService.printReport();
                     })
-                    //.thenRun(service::shutdown)
                     .join();
             logger.info("Report generation finished.");
 
