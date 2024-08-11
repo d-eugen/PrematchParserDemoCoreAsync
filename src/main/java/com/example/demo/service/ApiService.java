@@ -14,6 +14,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.function.Function;
 
+/**
+ * Service class for making API requests and handling responses.
+ * Supports fetching and deserializing data from external APIs.
+ */
 public class ApiService {
 
     private final HttpClient httpClient;
@@ -24,6 +28,15 @@ public class ApiService {
         this.objectMapper = new ObjectMapper();
     }
 
+    /**
+     * Fetches data from the specified URL and deserializes it into the specified type.
+     *
+     * @param url           The URL to fetch data from
+     * @param typeReference TypeReference for complex types
+     * @param <T>           The type of object to deserialize into
+     * @return Deserialized object of type T
+     * @throws ApiException if there's an error fetching or parsing the data
+     */
     public <T> T fetchData(String url, TypeReference<T> typeReference) {
         Function<String, T> deserializer = body -> {
             try {
@@ -35,6 +48,15 @@ public class ApiService {
         return fetchDataFromApi(url, deserializer);
     }
 
+    /**
+     * Fetches data from the specified URL and deserializes it into the specified type.
+     *
+     * @param url           The URL to fetch data from
+     * @param clazz         Type reference
+     * @param <T>           The type of object to deserialize into
+     * @return Deserialized object of type T
+     * @throws ApiException if there's an error fetching or parsing the data
+     */
     public <T> T fetchData(String url, Class<T> clazz) {
         Function<String, T> deserializer = body -> {
             try {
@@ -46,6 +68,16 @@ public class ApiService {
         return fetchDataFromApi(url, deserializer);
     }
 
+    /**
+     * Fetches data from the specified API endpoint and deserializes it using the provided deserializer function.
+     *
+     * @param <T>           The type of the data to be returned.
+     * @param url           The URL of the API endpoint to fetch data from.
+     * @param deserializer  A function that takes a JSON string and converts it to an instance of type T.
+     * @return              An instance of type T, which is the result of deserializing the API response.
+     * @throws ApiException If there is an error in the API request, such as an invalid URL,
+     *                      an unsuccessful HTTP status code, or a network issue.
+     */
     private <T> T fetchDataFromApi(String url, Function<String, T> deserializer) throws ApiException {
         try {
             URI uri = new URI(url);

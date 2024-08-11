@@ -13,6 +13,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Service class for fetching and processing sports-related data.
+ * Provides methods to retrieve information about sports, leagues, and events.
+ */
 public class SportService {
 
     private final ApiService apiService;
@@ -59,7 +63,6 @@ public class SportService {
         return eventResponse.getData();
     }
 
-    // TODO: define possible betlines: ["outright", "prematch", ...]
     public List<Event> fetchTopMatches(long leagueId, int limit) {
         return fetchAllEvents(leagueId).stream()
                 .filter(event -> "prematch".equalsIgnoreCase(event.getBetline()))

@@ -11,6 +11,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
+/**
+ * Service class for formatting and printing generated reports.
+ * Provides a hierarchical output of sports, leagues, events, and markets.
+ */
 public class ReportPrintService {
 
     private static final Logger logger = LoggerFactory.getLogger(ReportPrintService.class);
@@ -21,6 +25,9 @@ public class ReportPrintService {
         this.reportResult = reportResult;
     }
 
+    /**
+     * Prints the entire report to the console.
+     */
     public void printReport() {
         List<SportReport> sportReports = reportResult.getSportReports();
         for (SportReport sportReport : sportReports) {
