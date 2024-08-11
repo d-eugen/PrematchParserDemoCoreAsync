@@ -46,6 +46,14 @@ public class SportService {
                 .collect(Collectors.toList());
     }
 
+    public List<League> getTopLeagues(Sport sport) {
+        return sport.getRegions().stream()
+                .flatMap(region -> region.getLeagues().stream())
+                .filter(League::isTop)
+                .sorted(Comparator.comparing(League::getTopOrder))
+                .collect(Collectors.toList());
+    }
+
     public List<Event> fetchAllEvents(long leagueId) {
         EventResponse eventResponse = fetchEventsData(leagueId);
         return eventResponse.getData();

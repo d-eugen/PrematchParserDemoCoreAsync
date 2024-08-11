@@ -2,36 +2,58 @@ package com.example.demo;
 
 import com.example.demo.exception.ApiException;
 import com.example.demo.model.SportType;
-import com.example.demo.service.TopLeagueMarketsReportService;
+import com.example.demo.model.report.ReportResult;
+import com.example.demo.service.report.ReportPrintService;
+import com.example.demo.service.report.AsyncReportService;
 import com.example.demo.utils.PerformanceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
 public class DemoApplication {
     private static final Logger logger = LoggerFactory.getLogger(DemoApplication.class);
+
     public static void main(String[] args) {
-        //printTopLeaguesMarketReport();
+        //printTopLeaguesMarketReportAsync();
 
         PerformanceUtils.measureRuntime(
-                DemoApplication::printTopLeaguesMarketReport, "printTopLeaguesMarketReport()");
+                DemoApplication::printTopLeaguesMarketReportAsync,
+                "DemoApplication::printTopLeaguesMarketReportAsync");
     }
 
-    private static void printTopLeaguesMarketReport() {
-        logger.info(String.format("Printing of %s started...", TopLeagueMarketsReportService.NAME));
-
+    public static void printTopLeaguesMarketReportAsync() {
         try {
-            TopLeagueMarketsReportService report = new TopLeagueMarketsReportService();
+            //AsyncTopLeagueMarketsReportService service = new AsyncTopLeagueMarketsReportService();
+            AsyncReportService service = PerformanceUtils
+                    .measureRuntime(AsyncReportService::new,
+                            "AsyncTopLeagueMarketsReportService::new")
+                    .orElseThrow();
 
-            for (SportType sportType : SportType.values()) {
-                report.printReportToConsole(sportType);
-            }
+            List<String> selectedSportNames = Arrays.stream(SportType.values())
+                    .map(SportType::getDisplayName)
+                    .toList();
+
+            //CompletableFuture<ReportResult> reportFuture = service.generateReport();
+            CompletableFuture<ReportResult> reportFuture = PerformanceUtils
+                    .measureRuntime(() -> service.generateReport(selectedSportNames),
+                            "AsyncTopLeagueMarketsReportService::generateReport")
+                    .orElseThrow();
+
+            reportFuture.thenAccept(reportResult -> {
+                        ReportPrintService printService = new ReportPrintService(reportResult);
+                        printService.printReport();
+                    })
+                    .thenRun(service::shutdown)
+                    .join();
+
         } catch (ApiException e) {
             logger.error("Application encountered error: " + e.getMessage());
             e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        logger.info(String.format("Printing of %s finished.", TopLeagueMarketsReportService.NAME));
     }
 }
