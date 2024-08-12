@@ -13,9 +13,15 @@ import com.example.demo.model.report.ReportResult;
 import com.example.demo.model.report.RunnerReport;
 import com.example.demo.model.report.SportReport;
 import com.example.demo.service.SportService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Service class for processing sports data and generating detailed reports.
@@ -23,15 +29,88 @@ import java.util.List;
  */
 public class ReportService {
 
+    private static final Logger logger = LoggerFactory.getLogger(ReportService.class);
+    private static final int MAX_THREADS = 3;
     private static final int DEFAULT_MATCHES_LIMIT = 2;
     private final SportService sportService;
+    private final ExecutorService executorService;
 
     public ReportService() {
         this.sportService = new SportService();
+        this.executorService = Executors.newFixedThreadPool(MAX_THREADS);
     }
 
-    public ReportService(SportService sportService) {
-        this.sportService = sportService;
+    /**
+     * Synchronously generates a report based on the specified sports names.
+     * This method fetches sports data, filters it according to the provided list of sport names,
+     * processes each sport sequentially, and aggregates the results into a single report.
+     *
+     * @param selectedSportNames A list of sport names to filter the sports data.
+     *                           If null or empty, all sports will be included in the report.
+     * @return A {@link ReportResult} containing the processed sport reports based on the filtered sports data.
+     * <p>
+     * This method processes each sport sequentially in the current thread and does not involve any asynchronous operations.
+     * It returns the final {@link ReportResult} once all sports have been processed.
+     */
+    public ReportResult generateReportSync(List<String> selectedSportNames) {
+        List<SportReport> sportReports = new ArrayList<>();
+        List<Sport> sports = sportService.fetchSportsData();
+        if (selectedSportNames != null && selectedSportNames.size() > 0) {
+            sports = sports.stream()
+                    .filter(o -> selectedSportNames.contains(o.getName()))
+                    .toList();
+        }
+
+        for (Sport sport : sports) {
+            sportReports.add(processSport(sport));
+        }
+        return new ReportResult(sportReports);
+    }
+
+    /**
+     * Generates a report asynchronously based on the specified sports names.
+     * This method fetches sports data, filters it according to the provided list of sport names,
+     * and processes each sport asynchronously. The results are then aggregated into a single report.
+     *
+     * @param selectedSportNames A list of sport names to filter the sports data.
+     *                           If null or empty, all sports will be included in the report.
+     * @return A {@link ReportResult} generated from the filtered sports data.
+     *
+     * @throws CompletionException if an error occurs during the asynchronous processing of sports.
+     *         The cause of the exception can be retrieved using getCause().
+     *
+     * @implNote This method uses CompletableFuture to process sports asynchronously.
+     *           It blocks until all sport reports have been processed and aggregated
+     *           into the final report.
+     */
+    public ReportResult generateReportAsync(List<String> selectedSportNames) {
+        List<Sport> sports = sportService.fetchSportsData();
+        if (selectedSportNames != null && selectedSportNames.size() > 0) {
+            sports = sports.stream()
+                    .filter(o -> selectedSportNames.contains(o.getName()))
+                    .toList();
+        }
+
+        List<CompletableFuture<SportReport>> futureSportReports = sports.stream()
+                .map(this::processSportAsync)
+                .toList();
+
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(
+                futureSportReports.toArray(CompletableFuture[]::new)
+        );
+
+        return allOf.thenApply(v -> futureSportReports.stream()
+                        .map(CompletableFuture::join)
+                        .toList())
+                .thenApply(ReportResult::new)
+                .join();
+    }
+
+    private CompletableFuture<SportReport> processSportAsync(Sport sport) {
+        return CompletableFuture.supplyAsync(() -> {
+            logger.info("Processing report for: " + sport.getName());
+            return processSport(sport);
+        }, executorService);
     }
 
     public SportReport processSport(Sport sport) {
@@ -73,30 +152,8 @@ public class ReportService {
         return eventReport;
     }
 
-    /**
-     * Synchronously generates a report based on the specified sports names.
-     * This method fetches sports data, filters it according to the provided list of sport names,
-     * processes each sport sequentially, and aggregates the results into a single report.
-     *
-     * @param selectedSportNames A list of sport names to filter the sports data.
-     *                           If null or empty, all sports will be included in the report.
-     * @return A {@link ReportResult} containing the processed sport reports based on the filtered sports data.
-     *
-     * This method processes each sport sequentially in the current thread and does not involve any asynchronous operations.
-     * It returns the final {@link ReportResult} once all sports have been processed.
-     */
-    public ReportResult generateReport(List<String> selectedSportNames){
-        List<SportReport> sportReports = new ArrayList<>();
-        List<Sport> sports = sportService.fetchSportsData();
-        if (selectedSportNames != null && selectedSportNames.size() > 0) {
-            sports = sports.stream()
-                    .filter(o -> selectedSportNames.contains(o.getName()))
-                    .toList();
-        }
-
-        for (Sport sport : sports) {
-            sportReports.add(processSport(sport));
-        }
-        return new ReportResult(sportReports);
+    public void shutdown() {
+        logger.error("Shutdown Executor service");
+        executorService.shutdown();
     }
 }

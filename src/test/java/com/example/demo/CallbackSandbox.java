@@ -1,6 +1,5 @@
 package com.example.demo;
 
-import com.example.demo.service.report.AsyncReportService;
 import com.example.demo.utils.PerformanceUtils;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;

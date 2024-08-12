@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -19,24 +20,36 @@ import java.util.stream.Collectors;
  */
 public class SportService {
 
-    private final ApiService apiService;
+    private final AsyncApiService asyncApiService;
     private final AppConfig appConfig;
 
     public SportService() {
-        this.apiService = new ApiService();
+        this.asyncApiService = new AsyncApiService();
         this.appConfig = new AppConfig();
     }
 
     public List<Sport> fetchSportsData() {
-        return apiService.fetchData(appConfig.getSportsUrl(), new TypeReference<List<Sport>>() {});
+        return fetchSportsDataAsync().join();
     }
 
-    public EventResponse fetchEventsData(long leagueId)  {
-        return apiService.fetchData(appConfig.getEventsUrl(leagueId), EventResponse.class);
+    public EventResponse fetchEventsData(long leagueId) {
+        return fetchEventsDataAsync(leagueId).join();
     }
 
     public EventDetailsResponse fetchEventDetails(long eventId) {
-        return apiService.fetchData(appConfig.getEventDetailsUrl(eventId), EventDetailsResponse.class);
+        return fetchEventDetailsAsync(eventId).join();
+    }
+
+    public CompletableFuture<List<Sport>> fetchSportsDataAsync() {
+        return asyncApiService.fetchDataAsync(appConfig.getSportsUrl(), new TypeReference<List<Sport>>() {});
+    }
+
+    public CompletableFuture<EventResponse> fetchEventsDataAsync(long leagueId) {
+        return asyncApiService.fetchDataAsync(appConfig.getEventsUrl(leagueId), EventResponse.class);
+    }
+
+    public CompletableFuture<EventDetailsResponse> fetchEventDetailsAsync(long eventId) {
+        return asyncApiService.fetchDataAsync(appConfig.getEventDetailsUrl(eventId), EventDetailsResponse.class);
     }
 
     public List<League> getTopLeagues(SportType sportType) {
