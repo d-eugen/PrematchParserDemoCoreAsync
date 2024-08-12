@@ -84,7 +84,7 @@ public class DemoApplication {
      * <p>The method executes synchronously and handles both {@link ApiException} and unexpected exceptions.
      * It logs the progress of report generation and printing.</p>
      */
-    public static void printTopLeaguesMarketReport() {
+    public static void printTopLeaguesMarketReportSync() {
         try {
             logger.info("Starting synchronous report generation...");
             ReportService reportService = new ReportService();

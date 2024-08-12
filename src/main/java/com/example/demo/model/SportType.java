@@ -3,7 +3,7 @@ package com.example.demo.model;
 public enum SportType {
     FOOTBALL("Football"),
     TENNIS("Tennis"),
-    HOCKEY("Hockey"),
+    HOCKEY("Ice Hockey"),
     BASKETBALL("Basketball");
 
     private final String displayName;

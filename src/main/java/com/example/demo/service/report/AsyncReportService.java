@@ -1,9 +1,18 @@
 package com.example.demo.service.report;
 
+import com.example.demo.model.Event;
+import com.example.demo.model.EventDetailsResponse;
+import com.example.demo.model.League;
+import com.example.demo.model.Market;
+import com.example.demo.model.Runner;
 import com.example.demo.model.Sport;
+import com.example.demo.model.report.EventReport;
+import com.example.demo.model.report.LeagueReport;
+import com.example.demo.model.report.MarketReport;
 import com.example.demo.model.report.ReportResult;
+import com.example.demo.model.report.RunnerReport;
 import com.example.demo.model.report.SportReport;
-import com.example.demo.service.SportService;
+import com.example.demo.service.AsyncSportService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,14 +28,13 @@ import java.util.stream.Collectors;
  */
 public class AsyncReportService {
     private static final Logger logger = LoggerFactory.getLogger(AsyncReportService.class);
+    private static final int DEFAULT_MATCHES_LIMIT = 2;
     private static final int MAX_THREADS = 3;
-    private final SportService sportService;
-    private final ReportService reportService;
+    private final AsyncSportService asyncSportService;
     private final ExecutorService executorService;
 
     public AsyncReportService() {
-        this.sportService = new SportService();
-        this.reportService = new ReportService(this.sportService);
+        this.asyncSportService = new AsyncSportService();
         this.executorService = Executors.newFixedThreadPool(MAX_THREADS);
     }
 
@@ -46,7 +54,7 @@ public class AsyncReportService {
      */
     public CompletableFuture<ReportResult> generateReportAsync(List<String> selectedSportNames) {
         return CompletableFuture.supplyAsync(() -> {
-            List<Sport> sports = sportService.fetchSportsData();
+            List<Sport> sports = asyncSportService.fetchSportsDataAsync().join();
 
             if (selectedSportNames != null && selectedSportNames.size() > 0) {
                 sports = sports.stream()
@@ -71,7 +79,46 @@ public class AsyncReportService {
     }
 
     private CompletableFuture<SportReport> processSportAsync(Sport sport) {
-        return CompletableFuture.supplyAsync(() -> reportService.processSport(sport), executorService);
+        return CompletableFuture.supplyAsync(() -> processSport(sport), executorService);
+    }
+
+    public SportReport processSport(Sport sport) {
+        SportReport sportReport = new SportReport(sport.getName());
+        List<League> topLeagues = asyncSportService.getTopLeagues(sport);
+
+        for (League league : topLeagues) {
+            LeagueReport leagueReport = processLeague(league);
+            sportReport.addLeagueReport(leagueReport);
+        }
+
+        return sportReport;
+    }
+
+    public LeagueReport processLeague(League league) {
+        LeagueReport leagueReport = new LeagueReport(league.getName());
+        List<Event> topMatches = asyncSportService.fetchTopMatches(league.getId(), DEFAULT_MATCHES_LIMIT);
+
+        for (Event event : topMatches) {
+            EventReport eventReport = processEvent(event);
+            leagueReport.addEventReport(eventReport);
+        }
+
+        return leagueReport;
+    }
+
+    public EventReport processEvent(Event event) {
+        EventReport eventReport = new EventReport(event.getName(), event.getKickoffUtc() + " UTC", event.getId());
+        EventDetailsResponse eventDetails = asyncSportService.fetchEventDetailsAsync(event.getId()).join();
+
+        for (Market market : eventDetails.getMarkets()) {
+            MarketReport marketReport = new MarketReport(market.getName());
+            for (Runner runner : market.getRunners()) {
+                marketReport.addRunner(new RunnerReport(runner.getName(), runner.getPrice(), runner.getId()));
+            }
+            eventReport.addMarketReport(marketReport);
+        }
+
+        return eventReport;
     }
 
     public void shutdown() {

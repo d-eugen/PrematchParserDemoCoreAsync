@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -52,6 +53,40 @@ class DemoApplicationTests {
                     ReportResult report = futureReport.join();
                     logger.info("Wait complete");
                 }
+            } catch (Exception e) {
+                logger.error("Error: " + e.getMessage(), e);
+            } finally {
+                asyncReportService.shutdown();
+            }
+        }, String.format("Asynchronous data load x%s", retry));
+    }
+
+    @Test
+    void testAsyncReportGenerationTime_batch() {
+        AsyncReportService asyncReportService = new AsyncReportService();
+        int retry = 1;
+        PerformanceUtils.measureRuntime(() -> {
+            try {
+                logger.info("Enter runnable task");
+                List<String> selectedSportNames = Arrays.stream(SportType.values())
+                        .map(SportType::getDisplayName)
+                        .toList();
+                logger.info("Number of sports: " + selectedSportNames.size());
+                int n = retry;
+
+                List<CompletableFuture<ReportResult>> futures = new ArrayList<>();
+
+                while (n-- > 0) {
+                    logger.info("Retries left: " + n);
+                    CompletableFuture<ReportResult> futureReport = asyncReportService.generateReportAsync(selectedSportNames);
+                    futures.add(futureReport);
+                }
+
+                CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
+
+                allOf.thenAccept(x -> System.out.println("READY"))
+                        .join();
+
             } catch (Exception e) {
                 logger.error("Error: " + e.getMessage(), e);
             } finally {
