@@ -4,6 +4,8 @@ import com.example.demo.exception.ApiException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLHandshakeException;
 import java.io.IOException;
@@ -20,7 +22,7 @@ import java.util.function.Function;
  * Supports fetching and deserializing data from external APIs asynchronously.
  */
 public class AsyncApiService {
-
+    private static final Logger logger = LoggerFactory.getLogger(AsyncApiService.class);
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 

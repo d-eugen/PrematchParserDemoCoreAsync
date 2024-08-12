@@ -4,7 +4,6 @@ import com.example.demo.exception.ApiException;
 import com.example.demo.model.SportType;
 import com.example.demo.model.report.ReportResult;
 import com.example.demo.service.report.ReportPrintService;
-import com.example.demo.service.report.AsyncReportService;
 import com.example.demo.service.report.ReportService;
 import com.example.demo.utils.PerformanceUtils;
 import org.slf4j.Logger;
@@ -28,32 +27,30 @@ public class DemoApplication {
      *
      * <p>This method performs the following steps:</p>
      * <ol>
-     *     <li>Initializes an {@link AsyncReportService}.</li>
+     *     <li>Initializes an {@link ReportService}.</li>
      *     <li>Retrieves all sport names from the {@link SportType} enum.</li>
      *     <li>Asynchronously generates a report for all sports.</li>
      *     <li>Prints the generated report using {@link ReportPrintService}.</li>
-     *     <li>Shuts down the {@link AsyncReportService} after completion.</li>
+     *     <li>Shuts down the {@link ReportService} after completion.</li>
      * </ol>
      *
      * <p>The method uses {@link CompletableFuture} for asynchronous processing and handles
      * both {@link ApiException} and unexpected exceptions.</p>
      */
     public static void printTopLeaguesMarketReportAsync() {
-        AsyncReportService service = new AsyncReportService();
+        ReportService service = new ReportService();
         try {
             logger.info("Starting asynchronous report generation...");
             List<String> selectedSportNames = Arrays.stream(SportType.values())
                     .map(SportType::getDisplayName)
                     .toList();
 
-            CompletableFuture<ReportResult> reportFuture = service.generateReportAsync(selectedSportNames);
+            ReportResult reportFuture = service.generateReportAsync(selectedSportNames);
 
-            reportFuture.thenAccept(reportResult -> {
-                        logger.info("Report generation completed. Starting report printing...");
-                        ReportPrintService printService = new ReportPrintService(reportResult);
-                        printService.printReport();
-                    })
-                    .join();
+            logger.info("Report generation completed. Starting report printing...");
+            ReportPrintService printService = new ReportPrintService(reportFuture);
+            printService.printReport();
+
             logger.info("Report generation finished.");
 
         } catch (ApiException e) {
@@ -91,7 +88,7 @@ public class DemoApplication {
             List<String> selectedSportNames = Arrays.stream(SportType.values())
                     .map(SportType::getDisplayName)
                     .toList();
-            ReportResult reportResult = reportService.generateReport(selectedSportNames);
+            ReportResult reportResult = reportService.generateReportSync(selectedSportNames);
 
             logger.info("Report generation completed. Starting report printing...");
             ReportPrintService printService = new ReportPrintService(reportResult);
